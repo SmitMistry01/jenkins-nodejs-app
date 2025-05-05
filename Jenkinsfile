@@ -1,35 +1,45 @@
-pipeline{
+pipeline {
     agent any
-    environment{
+    environment {
         DOCKER_IMAGE = 'nodejs-app'
+        CONTAINER_NAME = 'nodejs-container'
     }
 
     stages {
-        stage('Checkout'){
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        stage('Build'){
+        
+        stage('Build') {
             steps {
-                bat 'npm run build'
+                // First install dependencies
+                bat 'npm install'
+                
+                // Then run build if you have a build script
+                // If not, remove this line
+                bat 'npm run build || echo "No build script found, continuing..."'
             }
         }
+        
         stage('Docker Build') {
             steps {
-                bat 'docker build -t %DOCKER_IMAGE% .'
+                bat "docker build -t ${DOCKER_IMAGE} ."
             }
         }
-        stage('Deploy'){
-            steps{
-                bat '''
-                    docker stop %DOCKER_IMG% || true
-                    docker rm %DOCKER_IMG% || true
-                    docker run -d -p 3000:3000 %DOCKER_IMG% %DOCKER_IMG%
-                '''
+        
+        stage('Deploy') {
+            steps {
+                bat """
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    docker run -d -p 3000:3000 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}
+                """
             }
         }
     }
+    
     post {
         always {
             cleanWs()
